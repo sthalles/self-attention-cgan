@@ -17,8 +17,8 @@ class DownSample(tf.keras.Model):
     if apply_batchnorm:
       self.bn = tf.keras.layers.BatchNormalization()
 
-  def call(self, x, **kwargs):
-    net = self.conv(x, **kwargs)
+  def call(self, x, sn_update, **kwargs):
+    net = self.conv(x, sn_update=sn_update)
 
     if self.apply_batchnorm:
       net = self.bn(net, **kwargs)
@@ -40,8 +40,8 @@ class UpSample(tf.keras.Model):
     self.bn = tf.keras.layers.BatchNormalization()
     self.dropout = tf.keras.layers.SpatialDropout2D(0.5)
 
-  def call(self, x, **kwargs):
-    net = self.conv(x, **kwargs)
+  def call(self, x, sn_update, output_shape, **kwargs):
+    net = self.conv(x, sn_update=sn_update, output_shape=output_shape)
     net = self.bn(net, **kwargs)
     if self.apply_dropout:
       net = self.dropout(net, **kwargs)

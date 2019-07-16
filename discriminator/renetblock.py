@@ -20,19 +20,19 @@ class Block(tf.keras.Model):
     if self.learnable_sc:
       self.c_sc = SNConv2D(out_channels, kernel_size=1, padding="VALID", kernel_initializer=initializer)
 
-  def residual(self, x, **kwargs):
+  def residual(self, x, sn_update, **kwargs):
     h = x
     h = self.activation(h)
-    h = self.c1(h, **kwargs)
+    h = self.c1(h, sn_update=sn_update)
     h = self.activation(h)
-    h = self.c2(h, **kwargs)
+    h = self.c2(h, sn_update=sn_update)
     if self.downsample:
       h = self._downsample(h)
     return h
 
-  def shortcut(self, x, **kwargs):
+  def shortcut(self, x, sn_update, **kwargs):
     if self.learnable_sc:
-      x = self.c_sc(x, **kwargs)
+      x = self.c_sc(x, sn_update=sn_update)
       if self.downsample:
         return self._downsample(x)
       else:
@@ -40,8 +40,8 @@ class Block(tf.keras.Model):
     else:
       return x
 
-  def __call__(self, x, **kwargs):
-    return self.residual(x, **kwargs) + self.shortcut(x, **kwargs)
+  def __call__(self, x, sn_update, **kwargs):
+    return self.residual(x, sn_update=sn_update, **kwargs) + self.shortcut(x, sn_update=sn_update, **kwargs)
 
 
 class OptimizedBlock(tf.keras.Model):
@@ -55,16 +55,16 @@ class OptimizedBlock(tf.keras.Model):
     self.c_sc = SNConv2D(out_channels, kernel_size=1, padding="VALID", kernel_initializer=initializer)
     self._downsample = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2, padding="VALID")
 
-  def residual(self, x, **kwargs):
+  def residual(self, x, sn_update, **kwargs):
     h = x
-    h = self.c1(h, **kwargs)
+    h = self.c1(h, sn_update=sn_update)
     h = self.activation(h)
-    h = self.c2(h, **kwargs)
+    h = self.c2(h, sn_update=sn_update)
     h = self._downsample(h)
     return h
 
-  def shortcut(self, x, **kwargs):
-    return self.c_sc(self._downsample(x), **kwargs)
+  def shortcut(self, x, sn_update, **kwargs):
+    return self.c_sc(self._downsample(x), sn_update=sn_update)
 
-  def __call__(self, x, **kwargs):
-    return self.residual(x, **kwargs) + self.shortcut(x, **kwargs)
+  def __call__(self, x, sn_update, **kwargs):
+    return self.residual(x, sn_update=sn_update, **kwargs) + self.shortcut(x, sn_update=sn_update, **kwargs)

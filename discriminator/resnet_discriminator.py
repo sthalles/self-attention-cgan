@@ -20,19 +20,19 @@ class ResnetDiscriminator(tf.keras.Model):
     if n_classes > 0:
       self.embeddings = SNEmbeeding(embedding_size=ch * 16, n_classes=10, kernel_initializer=initializer)
 
-  def call(self, x, y, *args, **kwargs):
+  def call(self, x, y, sn_update, **kwargs):
     h = x
-    h = self.block1(h, **kwargs)
-    h = self.block2(h, **kwargs)
+    h = self.block1(h, sn_update=sn_update, **kwargs)
+    h = self.block2(h, sn_update=sn_update, **kwargs)
     # h = self.sn_block(h)
-    h = self.block3(h, **kwargs)
-    h = self.block4(h, **kwargs)
-    h = self.block5(h, **kwargs)
+    h = self.block3(h, sn_update=sn_update, **kwargs)
+    h = self.block4(h, sn_update=sn_update, **kwargs)
+    h = self.block5(h, sn_update=sn_update, **kwargs)
     h = self.activation(h)
     h = tf.reduce_sum(h, axis=(1, 2))
-    output = self.linear(h, **kwargs)
+    output = self.linear(h, sn_update=sn_update)
     if y is not None:
-      embed = self.embeddings(y, **kwargs)
+      embed = self.embeddings(y, sn_update=sn_update,)
       output += tf.reduce_sum(h * embed, axis=1, keepdims=True)
 
-    return h
+    return output
