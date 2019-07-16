@@ -31,8 +31,8 @@ class SNTransposeConv2D(tf.keras.Model):
         assert self.u.shape == [1, input_shape[-1]], "Wrong shape for SNDense layer"
 
         if self.use_bias:
-            self.biases = self.add_weight(name='biases', shape=[self.filters],
-                                          initializer='zeros', trainable=True)
+            self.bias = self.add_weight(name='biases', shape=[self.filters],
+                                        initializer='zeros', trainable=True)
 
     def compute_spectral_normal(self, weights, sn_update):
         # Spectrally Normalized Weight
@@ -54,15 +54,15 @@ class SNTransposeConv2D(tf.keras.Model):
     def call(self, x, sn_update, output_shape=None):
         assert sn_update is not None, "sn_update parameter not provided."
         if output_shape is None:
-            shape = x.shape
-            output_shape = [shape[0], shape[1] * 2, shape[2] * 2, self.filters]
+            input_shape = x.shape
+            output_shape = [input_shape[0], input_shape[1] * 2, input_shape[2] * 2, self.filters]
 
         w_bar = self.compute_spectral_normal(self.kernel, sn_update)
         deconv = tf.nn.conv2d_transpose(x, w_bar, output_shape=output_shape, strides=[1, self.strides, self.strides, 1],
                                         padding=self.padding)
 
         if self.use_bias:
-            deconv = tf.nn.bias_add(deconv, self.biases)
+            deconv = tf.nn.bias_add(deconv, self.bias)
 
         deconv.shape.assert_is_compatible_with(output_shape)
         return deconv

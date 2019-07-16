@@ -37,10 +37,10 @@ generator = UNetGenerator(ch=16, out_channels=2)
 gen_output = generator(L_channel, sn_update=True, **kwargs)
 assert gen_output.shape == (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 2), "Error in the generator output shape"
 
-discriminator = ResnetDiscriminator(ch=16, n_classes=N_CLASSES)
+discriminator = ResnetDiscriminator(ch=16, n_classes=0)
 
-disc_fake = discriminator(lab_input, fake_labels, sn_update=True, **kwargs)
+disc_fake = discriminator(lab_input, y=None, sn_update=True, **kwargs)
 assert disc_fake.shape == (BATCH_SIZE, 1), "Error in the discriminator output shape"
 
-disc_fake = discriminator(lab_input, fake_labels, sn_update=False, **kwargs)
+disc_fake = discriminator(lab_input, y=None, sn_update=False, **kwargs)
 assert disc_fake.shape == (BATCH_SIZE, 1), "Error in the discriminator output shape"
