@@ -1,5 +1,5 @@
 import tensorflow as tf
-from discriminator.renetblock import OptimizedBlock, Block
+from discriminator.resblocks import OptimizedBlock, Block
 from layers.embedding_sn import SNEmbeeding
 from layers.dense_sn import SNDense
 
@@ -19,7 +19,7 @@ class ResnetDiscriminator(tf.keras.Model):
         self.linear = SNDense(units=1, kernel_initializer=initializer)
 
         if n_classes > 0:
-            self.embeddings = SNEmbeeding(embedding_size=ch * 16, n_classes=10, kernel_initializer=initializer)
+            self.embeddings = SNEmbeeding(embedding_size=ch * 16, n_classes=n_classes, kernel_initializer=initializer)
 
     def call(self, x, y, sn_update, **kwargs):
         h = x
