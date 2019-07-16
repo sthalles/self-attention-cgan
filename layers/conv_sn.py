@@ -1,0 +1,59 @@
+import tensorflow as tf
+from layers.ops import power_iteration
+
+
+class SNConv2D(tf.keras.Model):
+  def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', max_iters=1,
+               kernel_initializer='normal', use_bias=True):
+    super(SNConv2D, self).__init__()
+    self.max_iters = max_iters
+    self.strides = strides
+    self.padding = padding
+    self.use_bias = use_bias
+    self.filters = filters
+    self.kernel_size = kernel_size
+    self.kernel_initializer = kernel_initializer
+    self.u = None
+
+  def build(self, input_shape):
+    # kernel shape [kernel_size, kernel_size, in_channels, out_channels]
+    self.kernel = self.add_weight(shape=(self.kernel_size, self.kernel_size, input_shape[-1], self.filters),
+                                  initializer=self.kernel_initializer,
+                                  trainable=True,
+                                  name='kernel')
+    if self.use_bias:
+      self.biases = self.add_weight(name='biases', shape=[self.filters],
+                                    initializer='zeros', trainable=True)
+
+  def compute_spectral_normal(self, weights, training):
+    # Spectrally Normalized Weight
+    W_shape = weights.shape.as_list()
+
+    if self.u is None:
+      # =[number_classes, embedding_size]
+      self.u = self.add_weight(
+        'sn_estimate',
+        shape=[1, W_shape[-1]],
+        initializer='normal',
+        dtype=weights.dtype,
+        trainable=False)
+
+    # Flatten the Tensor
+    W_mat = tf.reshape(weights, [-1, W_shape[-1]])  # [-1, output_channel]
+    W_sn, u, v = power_iteration(W_mat, self.u, rounds=self.max_iters)
+
+    if training == True:
+      # Update estimated 1st singular vector
+      self.u.assign(u)
+
+    W_mat = W_mat / W_sn
+    w_bar = tf.reshape(W_mat, W_shape)
+
+    return w_bar
+
+  def call(self, x, training):
+    w_bar = self.compute_spectral_normal(self.kernel, training)
+    conv = tf.nn.conv2d(x, w_bar, strides=[1, self.strides, self.strides, 1], padding=self.padding)
+    if self.use_bias:
+      conv = tf.nn.bias_add(conv, self.biases)
+    return conv
