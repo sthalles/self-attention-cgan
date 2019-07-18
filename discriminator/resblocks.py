@@ -15,7 +15,7 @@ class Block(tf.keras.Model):
 
         self.c1 = SNConv2D(hidden_channels, kernel_size=ksize, padding=pad, kernel_initializer=initializer)
         self.c2 = SNConv2D(out_channels, kernel_size=ksize, padding=pad, kernel_initializer=initializer)
-        self._downsample = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2, padding="SAME")
+        self.avg_pool = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2, padding="SAME")
 
         if self.learnable_sc:
             self.c_sc = SNConv2D(out_channels, kernel_size=1, padding="VALID", kernel_initializer=initializer)
@@ -27,14 +27,14 @@ class Block(tf.keras.Model):
         h = self.activation(h)
         h = self.c2(h, sn_update=sn_update)
         if self.downsample:
-            h = self._downsample(h)
+            h = self.avg_pool(h)
         return h
 
     def shortcut(self, x, sn_update, **kwargs):
         if self.learnable_sc:
             x = self.c_sc(x, sn_update=sn_update)
             if self.downsample:
-                return self._downsample(x)
+                return self.avg_pool(x)
             else:
                 return x
         else:
@@ -53,18 +53,18 @@ class OptimizedBlock(tf.keras.Model):
         self.c1 = SNConv2D(out_channels, kernel_size=ksize, padding=pad, kernel_initializer=initializer)
         self.c2 = SNConv2D(out_channels, kernel_size=ksize, padding=pad, kernel_initializer=initializer)
         self.c_sc = SNConv2D(out_channels, kernel_size=1, padding="VALID", kernel_initializer=initializer)
-        self._downsample = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2, padding="VALID")
+        self.avg_pool = tf.keras.layers.AveragePooling2D(pool_size=2, strides=2, padding="VALID")
 
     def residual(self, x, sn_update, **kwargs):
         h = x
         h = self.c1(h, sn_update=sn_update)
         h = self.activation(h)
         h = self.c2(h, sn_update=sn_update)
-        h = self._downsample(h)
+        h = self.avg_pool(h)
         return h
 
     def shortcut(self, x, sn_update, **kwargs):
-        return self.c_sc(self._downsample(x), sn_update=sn_update)
+        return self.c_sc(self.avg_pool(x), sn_update=sn_update)
 
     def __call__(self, x, sn_update, **kwargs):
         return self.residual(x, sn_update=sn_update, **kwargs) + self.shortcut(x, sn_update=sn_update, **kwargs)

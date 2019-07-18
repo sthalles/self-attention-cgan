@@ -3,7 +3,7 @@ import tensorflow as tf
 from layers.conv_sn import SNConv2D
 from layers.transpose_conv_sn import SNTransposeConv2D
 from layers.netblocks import UpSample, DownSample
-
+from layers.sn_non_local_block import SNNonLocalBlock
 
 class UNetGenerator(tf.keras.Model):
     def __init__(self, ch, out_channels, activation=tf.keras.layers.ReLU()):
@@ -11,7 +11,7 @@ class UNetGenerator(tf.keras.Model):
         # encoder
         self.down1 = DownSample(ch, 3, apply_batchnorm=False, activation=activation)
         self.down2 = DownSample(ch * 2, 3, activation=activation)
-        # self.enc_attention = SNNonLocalBlock(ch*2)
+        self.enc_attention = SNNonLocalBlock(ch*2)
         self.down3 = DownSample(ch * 2, 3, activation=activation)
         self.down4 = DownSample(ch * 4, 3, activation=activation)
         self.down5 = DownSample(ch * 4, 3, activation=activation)
@@ -24,7 +24,7 @@ class UNetGenerator(tf.keras.Model):
         self.up3 = UpSample(ch * 4, 3, apply_dropout=True, activation=activation)
         self.up4 = UpSample(ch * 2, 3, activation=activation)
         self.up5 = UpSample(ch * 2, 3, activation=activation)
-        # self.dec_attention = SNNonLocalBlock(ch*2)
+        self.dec_attention = SNNonLocalBlock(ch*4)
         self.up6 = UpSample(ch, 3, activation=activation)
 
         self.concat = tf.keras.layers.Concatenate()
@@ -39,8 +39,9 @@ class UNetGenerator(tf.keras.Model):
         # encoder forward
         down1 = self.down1(x, sn_update=sn_update, **kwargs)
         down2 = self.down2(down1, sn_update=sn_update, **kwargs)
-        enc_attention = down2  # self.enc_attention(down2)
+        enc_attention = self.enc_attention(down2, sn_update=sn_update)
         down3 = self.down3(enc_attention, sn_update=sn_update, **kwargs)
+
         down4 = self.down4(down3, sn_update=sn_update, **kwargs)
         down5 = self.down5(down4, sn_update=sn_update, **kwargs)
         down6 = self.down6(down5, sn_update=sn_update, **kwargs)
@@ -62,9 +63,9 @@ class UNetGenerator(tf.keras.Model):
         h = self.up5(h, sn_update=sn_update, output_shape=down2.shape, **kwargs)
         h = self.concat([h, down2])
 
-        dec_attention = h  # self.dec_attention(up5)
+        h = self.dec_attention(h, sn_update=sn_update)
 
-        h = self.up6(dec_attention, sn_update=sn_update, output_shape=down1.shape, **kwargs)
+        h = self.up6(h, sn_update=sn_update, output_shape=down1.shape, **kwargs)
         h = self.concat([h, down1])
 
         return tf.nn.tanh(self.conv(h, sn_update=sn_update))
